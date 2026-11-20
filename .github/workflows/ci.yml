@@ -1,0 +1,20 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: node --test queue.test.mjs
+      - run: docker build -t courier-queue .
+      - name: Exercise the image with a persistent volume
+        run: |
+          docker volume create courier-data
+          docker run --rm -v courier-data:/data courier-queue enqueue fixture "two words"
+          docker run --rm -v courier-data:/data courier-queue work --once
+          docker run --rm -v courier-data:/data courier-queue status fixture | grep '"state":"succeeded"'
